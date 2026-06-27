@@ -1,11 +1,28 @@
 from __future__ import annotations
 
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
 
 from portfolio.trade import Trade
+from risk.volatility_targeting import compute_rolling_vol
+
+
+def _realized_vol_stats(
+    close: pd.Series,
+    periods_per_year: float = 98_280,
+) -> Dict[str, float]:
+    """Compute summary stats about the underlying instrument's realized vol."""
+    vol = compute_rolling_vol(close, window=20, periods_per_year=periods_per_year)
+    valid = vol[vol > 0]
+    if valid.empty:
+        return {"realized_vol_mean": 0.0, "realized_vol_min": 0.0, "realized_vol_max": 0.0}
+    return {
+        "realized_vol_mean": float(valid.mean()),
+        "realized_vol_min": float(valid.min()),
+        "realized_vol_max": float(valid.max()),
+    }
 
 
 def calculate_performance_summary(
@@ -13,6 +30,7 @@ def calculate_performance_summary(
     candles: pd.DataFrame,
     initial_capital: float = 0.0,
     max_contracts_held: int | None = None,
+    vol_multiplier_series: Optional[pd.Series] = None,
 ) -> Dict[str, float | int]:
     if not candles.empty and "close" in candles.columns:
         close_series = pd.to_numeric(candles["close"], errors="coerce").dropna()
@@ -73,6 +91,28 @@ def calculate_performance_summary(
         short_trades = 0
         all_trades = 0
 
+    # ── Volatility targeting stats ───────────────────────────────
+    vol_stats = _realized_vol_stats(close_series)
+
+    if vol_multiplier_series is not None and not vol_multiplier_series.empty:
+        valid_mult = vol_multiplier_series[vol_multiplier_series > 0]
+        if not valid_mult.empty:
+            vol_stats["vol_mult_mean"] = float(valid_mult.mean())
+            vol_stats["vol_mult_min"] = float(valid_mult.min())
+            vol_stats["vol_mult_max"] = float(valid_mult.max())
+            vol_stats["vol_mult_std"] = float(valid_mult.std())
+        else:
+            vol_stats |= {"vol_mult_mean": 0.0, "vol_mult_min": 0.0, "vol_mult_max": 0.0, "vol_mult_std": 0.0}
+    else:
+        vol_stats |= {"vol_mult_mean": 1.0, "vol_mult_min": 1.0, "vol_mult_max": 1.0, "vol_mult_std": 0.0}
+
+    # Dollar-equivalent of buy & hold return
+    buy_and_hold_return_dollars = initial_capital * (buy_and_hold_return / 100.0)
+    # Drawdown as % of initial capital
+    max_strategy_drawdown_pct = (
+        (max_strategy_drawdown / initial_capital * 100.0) if initial_capital != 0.0 else 0.0
+    )
+
     return {
         "net_profit_long": net_profit_long,
         "net_profit_short": net_profit_short,
@@ -84,32 +124,35 @@ def calculate_performance_summary(
         "short_trades": short_trades,
         "all_trades": all_trades,
         "max_strategy_drawdown": max_strategy_drawdown,
+        "max_strategy_drawdown_pct": max_strategy_drawdown_pct,
         "max_close_to_close_drawdown": max_close_to_close_drawdown,
         "buy_and_hold_return": buy_and_hold_return,
+        "buy_and_hold_return_dollars": buy_and_hold_return_dollars,
         "max_contracts_held": max_contracts_held if max_contracts_held is not None else 0,
+        "initial_capital": initial_capital,
+        **vol_stats,
     }
 
 
 def format_performance_summary(summary: Dict[str, float | int]) -> str:
-    return "\n".join(
-        [
-            "Long Positions:",
-            f"  Net profit: ${summary['net_profit_long']:.2f}",
-            f"  Gross profit: ${summary['gross_profit_long']:.2f}",
-            f"  Trades: {summary['long_trades']}",
-            "",
-            "Short Positions:",
-            f"  Net profit: ${summary['net_profit_short']:.2f}",
-            f"  Gross profit: ${summary['gross_profit_short']:.2f}",
-            f"  Trades: {summary['short_trades']}",
-            "",
-            "All Positions:",
-            f"  Net profit: ${summary['net_profit_all']:.2f}",
-            f"  Gross profit: ${summary['gross_profit_all']:.2f}",
-            f"  Trades: {summary['all_trades']}",
-            f"  Max strategy drawdown ($): ${summary['max_strategy_drawdown']:.2f}",
-            f"  Max Close to close drawdown: {summary['max_close_to_close_drawdown']:.2f}",
-            f"  Buy and Hold return: {summary['buy_and_hold_return']:.2f}%",
-            f"  Max contract held: {summary['max_contracts_held']}",
-        ]
-    )
+    lines = [
+        "Long Positions:",
+        f"  Net profit: ${summary['net_profit_long']:.2f}",
+        f"  Gross profit: ${summary['gross_profit_long']:.2f}",
+        f"  Trades: {summary['long_trades']}",
+        "",
+        "Short Positions:",
+        f"  Net profit: ${summary['net_profit_short']:.2f}",
+        f"  Gross profit: ${summary['gross_profit_short']:.2f}",
+        f"  Trades: {summary['short_trades']}",
+        "",
+        "All Positions:",
+        f"  Net profit: ${summary['net_profit_all']:.2f}",
+        f"  Gross profit: ${summary['gross_profit_all']:.2f}",
+        f"  Trades: {summary['all_trades']}",
+        f"  Max strategy drawdown: ${summary['max_strategy_drawdown']:.2f} ({summary['max_strategy_drawdown_pct']:.2f}%)",
+        f"  Max Close to close drawdown: {summary['max_close_to_close_drawdown']:.2f}",
+        f"  Buy and Hold return: ${summary['buy_and_hold_return_dollars']:.2f} ({summary['buy_and_hold_return']:.2f}%)",
+        f"  Max contract held: {summary['max_contracts_held']}",
+    ]
+    return "\n".join(lines)

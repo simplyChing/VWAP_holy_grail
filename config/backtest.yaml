@@ -8,3 +8,22 @@ backtest:
   run_monte_carlo: true
   monte_carlo_sims: 1000
 
+  # ── Volatility Targeting ──────────────────────────────────────
+  # Enabled / disabled switch.
+  vol_target_enabled: true
+  # Desired annualized portfolio volatility (e.g. 0.20 = 20 %).
+  vol_target_annual: 0.20
+  # Estimator: "rolling" (simple rolling std) or "ewma".
+  vol_method: "rolling"
+  # Lookback window in bars (20 bars ≈ 20 minutes at 1m freq).
+  vol_window: 20
+  # Data frequency for annualization factor.
+  vol_data_freq: "1m"
+  # Clamp multipliers to prevent extreme sizing.
+  vol_min_mult: 0.25
+  vol_max_mult: 4.0
+  # Floor on forecast vol to avoid divide-by-zero.
+  vol_floor: 0.05
+  # Rounding: "round", "floor", or "ceil".
+  vol_round_func: "round"
+

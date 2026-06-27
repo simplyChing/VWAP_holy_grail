@@ -1,10 +1,11 @@
-from typing import Dict
+from typing import Dict, Optional
 import pandas as pd
 import os
 
 from engine.event_loop import EventLoop
 from engine.metrics import Metrics
 from execution.fills import FillEngine
+from risk.volatility_targeting import compute_vol_multiplier, estimate_periods_per_year
 
 
 class BacktestReport:
@@ -60,7 +61,36 @@ class Backtester:
 
     def _run(self, df: pd.DataFrame) -> BacktestReport:
         signals = self.strategy.generate_signals(df)
+
+        # ── Volatility targeting overlay ──────────────────────────
+        vol_enabled = bool(self.backtest_settings.get("vol_target_enabled", False))
+        if vol_enabled:
+            target_vol = float(self.backtest_settings.get("vol_target_annual", 0.20))
+            method = str(self.backtest_settings.get("vol_method", "rolling"))
+            window = int(self.backtest_settings.get("vol_window", 20))
+            data_freq = str(self.backtest_settings.get("vol_data_freq", "1m"))
+            min_mult = float(self.backtest_settings.get("vol_min_mult", 0.25))
+            max_mult = float(self.backtest_settings.get("vol_max_mult", 4.0))
+            vol_floor = float(self.backtest_settings.get("vol_floor", 0.05))
+            round_func = str(self.backtest_settings.get("vol_round_func", "round"))
+            periods_per_year = estimate_periods_per_year(data_freq)
+
+            signals["vol_multiplier"] = compute_vol_multiplier(
+                signals["close"],
+                target_annual_vol=target_vol,
+                method=method,
+                window=window,
+                min_mult=min_mult,
+                max_mult=max_mult,
+                periods_per_year=periods_per_year,
+                vol_floor=vol_floor,
+            )
+        else:
+            signals["vol_multiplier"] = 1.0
+            round_func = "round"
+
         fill_engine = FillEngine(self.instrument, self.backtest_settings)
+        fill_engine.configure_vol_targeting(enabled=vol_enabled, round_func=round_func)
 
         def step(row):
             fill_engine.process_row(row)
@@ -70,6 +100,8 @@ class Backtester:
         fill_engine.finalize()
 
         setattr(self, "max_contracts_held", fill_engine.max_contracts_held)
+        # Store vol multiplier series for reporting
+        setattr(self, "vol_multiplier_series", signals["vol_multiplier"])
         metrics = Metrics(fill_engine.trades)
         return BacktestReport(fill_engine.trades, metrics)
 

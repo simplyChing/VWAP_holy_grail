@@ -46,6 +46,7 @@ def main() -> None:
         filtered_candles,
         initial_capital=float(backtest_config["backtest"].get("initial_capital", 0.0)),
         max_contracts_held=getattr(engine, "max_contracts_held", None),
+        vol_multiplier_series=getattr(engine, "vol_multiplier_series", None),
     )
     print(format_performance_summary(performance_summary))
 
