@@ -1,0 +1,66 @@
+This is a backtest based on the book: 
+Volume Weighted Average Price (VWAP) The Holy Grail for Day Trading Systems
+Using exactly what stated in the book with: entry, exit, timing criteria.
+After implementing, apply volatility targetting.
+
+All entry, exit, timing are timed using candle open
+
+Testing dates
+  start_date: "2026-01-20"
+  end_date: "2026-04-15"
+
+Conclusion: volatility targetting does yield alpha. The strategy was close to break even at first. But with
+volatility targetting, it has yield an astounding 13.94%.
+
+Analytics:
+Both long and short without volatility targetting
+Trades: 718
+Total PnL: -46.00  (-0.018%)
+Win Rate: 21.31%
+Profit Factor: 1.00
+Average Trade: -0.06
+
+Long Positions:
+  Net profit: $667.50
+  Gross profit: $12734.50
+  Trades: 352
+
+Short Positions:
+  Net profit: $-713.50
+  Gross profit: $11727.00
+  Trades: 366
+
+All Positions:
+  Net profit: $-46.00
+  Gross profit: $24461.50
+  Trades: 718
+  Max strategy drawdown: $5293.00 (21.17%)
+  Max Close to close drawdown: 0.13
+  Buy and Hold return: $752.41 (3.01%)
+  Max contract held: 1
+
+Both long and short with volatility targetting:
+Trades: 718
+Total PnL: 3485.00 (13.94%)
+Win Rate: 21.17%
+Profit Factor: 1.13
+Average Trade: 4.85
+
+Long Positions:
+  Net profit: $1650.50
+  Gross profit: $15432.50
+  Trades: 352
+
+Short Positions:
+  Net profit: $1834.50
+  Gross profit: $15839.50
+  Trades: 366
+
+All Positions:
+  Net profit: $3485.00
+  Gross profit: $31272.00
+  Trades: 718
+  Max strategy drawdown: $5422.00 (21.69%)
+  Max Close to close drawdown: 0.13
+  Buy and Hold return: $752.41 (3.01%)
+  Max contract held: 4
