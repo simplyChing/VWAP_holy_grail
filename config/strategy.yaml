@@ -1,0 +1,11 @@
+strategy:
+  entry_time: "09:31:00"
+  exit_time: "16:00:00"
+  allow_multiple_sessions: true
+  stop_on_vwap_cross: true
+  trail_vwap_stop: false
+  start_of_day: "09:30:00"
+  end_of_day: "16:00:00"
+  max_trade_quantity: 1
+  use_daily_open_for_entry: false
+  data_timezone: "America/New_York"

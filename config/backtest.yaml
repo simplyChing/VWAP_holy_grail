@@ -1,0 +1,10 @@
+backtest:
+  start_date: "2026-01-20"
+  end_date: "2026-04-15"
+  initial_capital: 25000.0
+  timezone: "America/New_York"
+  report: true
+  save_trades: true
+  run_monte_carlo: true
+  monte_carlo_sims: 1000
+

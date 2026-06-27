@@ -1,0 +1,8 @@
+pandas>=1.3
+numpy>=1.21
+pyyaml
+matplotlib
+pytz
+python-dateutil
+yfinance==0.2.27
+plotly>=5.0

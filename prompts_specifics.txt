@@ -1,0 +1,3 @@
+I want to actually control the quality of codes by hand. So slowly build up each file, explain thoroughly before generating files. 
+- structure.txt is where the code architecture gonna get built up
+- Trading_strategy_idea.txt is the trading idea from the book. Build it
