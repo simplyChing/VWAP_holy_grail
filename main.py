@@ -52,13 +52,26 @@ def main() -> None:
 
     if report.trades:
         report.save_trades(os.path.join(root, "reports", "trades", "trades.csv"))
-        chart_path = generate_trade_chart_for_report(
+
+        figures_html_dir = os.path.join(root, "reports", "figures_html")
+        figures_png_dir = os.path.join(root, "reports", "figures_png")
+        os.makedirs(figures_png_dir, exist_ok=True)
+
+        # ── Trade chart ──────────────────────────────────────────
+        chart_html = generate_trade_chart_for_report(
             filtered_candles,
             report.trades,
-            os.path.join(root, "reports", "figures_html"),
+            figures_html_dir,
             filename="trade_chart.html",
         )
-        # generate equity curve using initial capital from backtest config
+        chart_png = generate_trade_chart_for_report(
+            filtered_candles,
+            report.trades,
+            figures_png_dir,
+            filename="trade_chart.png",
+        )
+
+        # ── Equity curve ─────────────────────────────────────────
         try:
             initial_cap = backtest_config["backtest"]["initial_capital"]
         except Exception:
@@ -67,14 +80,22 @@ def main() -> None:
             smooth_w = backtest_config["backtest"].get("equity_smooth_window", 5)
         except Exception:
             smooth_w = 5
-        equity_path = generate_equity_curve_for_report(
+        equity_html = generate_equity_curve_for_report(
             report.trades,
-            os.path.join(root, "reports", "figures_html"),
+            figures_html_dir,
             initial_cap,
             filename="equity_curve.html",
             smooth_window=smooth_w,
         )
-        # optionally run Monte Carlo report if enabled in backtest config
+        equity_png = generate_equity_curve_for_report(
+            report.trades,
+            figures_png_dir,
+            initial_cap,
+            filename="equity_curve.png",
+            smooth_window=smooth_w,
+        )
+
+        # ── Monte Carlo (expensive — compute once, copy PNG) ─────
         try:
             run_mc = bool(backtest_config["backtest"].get("run_monte_carlo", False))
         except Exception:
@@ -84,15 +105,19 @@ def main() -> None:
                 mc_sims = int(backtest_config["backtest"].get("monte_carlo_sims", 2000))
             except Exception:
                 mc_sims = 2000
-            mc_path = generate_monte_carlo_report(
+            mc_html = generate_monte_carlo_report(
                 os.path.join(root, "reports", "trades", "trades.csv"),
                 os.path.join(root, "config", "backtest.yaml"),
-                os.path.join(root, "reports", "figures_html"),
+                figures_html_dir,
                 n_sims=mc_sims,
+                png_output_folder=figures_png_dir,
             )
-            print(f"Saved Monte Carlo report to {mc_path}")
-        print(f"Saved interactive chart to {chart_path}")
-        print(f"Saved equity chart to {equity_path}")
+            print(f"Saved Monte Carlo report to {mc_html}")
+
+        print(f"Saved interactive chart (HTML) to {chart_html}")
+        print(f"Saved interactive chart (PNG)  to {chart_png}")
+        print(f"Saved equity chart (HTML) to {equity_html}")
+        print(f"Saved equity chart (PNG)  to {equity_png}")
     else:
         print("No trades generated; skipping trade save and chart generation.")
 

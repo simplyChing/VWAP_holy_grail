@@ -19,6 +19,9 @@ def generate_trade_chart_html(
     if "vwap" not in df.columns:
         df["vwap"] = calculate_vwap(df)
 
+    # Convert Timestamps to ISO strings for kaleido JSON serialization
+    df["datetime"] = df["datetime"].dt.strftime("%Y-%m-%d %H:%M:%S%z")
+
     fig = go.Figure(
         data=[
             go.Candlestick(
@@ -52,19 +55,22 @@ def generate_trade_chart_html(
     long_exit_text = []
     short_exit_text = []
 
+    strftime = "%Y-%m-%d %H:%M:%S%z"
     for trade in trades:
+        entry_t = trade.entry_time.strftime(strftime) if hasattr(trade.entry_time, "strftime") else trade.entry_time
+        exit_t = trade.exit_time.strftime(strftime) if hasattr(trade.exit_time, "strftime") else trade.exit_time
         if trade.side == "long":
-            long_entry_x.append(trade.entry_time)
+            long_entry_x.append(entry_t)
             long_entry_y.append(trade.entry_price)
             long_entry_text.append(f"LONG ENTRY\n{trade.entry_price:.2f}")
-            long_exit_x.append(trade.exit_time)
+            long_exit_x.append(exit_t)
             long_exit_y.append(trade.exit_price)
             long_exit_text.append(f"LONG EXIT\n{trade.exit_price:.2f}\nPnL {trade.pnl:.2f}")
         else:
-            short_entry_x.append(trade.entry_time)
+            short_entry_x.append(entry_t)
             short_entry_y.append(trade.entry_price)
             short_entry_text.append(f"SHORT ENTRY\n{trade.entry_price:.2f}")
-            short_exit_x.append(trade.exit_time)
+            short_exit_x.append(exit_t)
             short_exit_y.append(trade.exit_price)
             short_exit_text.append(f"SHORT EXIT\n{trade.exit_price:.2f}\nPnL {trade.pnl:.2f}")
 
@@ -131,20 +137,23 @@ def generate_trade_chart_html(
     fig.update_xaxes(fixedrange=False)
     fig.update_yaxes(fixedrange=False)
 
-    fig.write_html(
-        output_path,
-        include_plotlyjs="cdn",
-        config={
-            "scrollZoom": True,
-            "displayModeBar": True,
-            "modeBarButtonsToAdd": [
-                "zoomIn2d",
-                "zoomOut2d",
-                "autoScale2d",
-                "resetScale2d",
-            ],
-        },
-    )
+    if output_path.endswith(".html"):
+        fig.write_html(
+            output_path,
+            include_plotlyjs="cdn",
+            config={
+                "scrollZoom": True,
+                "displayModeBar": True,
+                "modeBarButtonsToAdd": [
+                    "zoomIn2d",
+                    "zoomOut2d",
+                    "autoScale2d",
+                    "resetScale2d",
+                ],
+            },
+        )
+    else:
+        fig.write_image(output_path, width=1400, height=700, scale=2, engine="kaleido")
     return output_path
 
 

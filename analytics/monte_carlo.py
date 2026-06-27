@@ -1,5 +1,5 @@
 import os
-from typing import Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -41,6 +41,7 @@ def generate_monte_carlo_report(
     n_sims: int = 2000,
     sample_curve_count: int = 30,
     random_seed: int | None = 42,
+    png_output_folder: Optional[str] = None,
 ) -> str:
     os.makedirs(output_folder, exist_ok=True)
 
@@ -56,10 +57,11 @@ def generate_monte_carlo_report(
     rng = np.random.default_rng(random_seed)
     final_pnls, equity_paths = run_monte_carlo(trades["pnl"], n_sims=n_sims, rng=rng)
 
-    # save final pnl distribution
+    # save final pnl distribution to reports/data/
+    data_dir = os.path.join(os.path.dirname(output_folder), "data")
+    os.makedirs(data_dir, exist_ok=True)
     final_df = pd.DataFrame({"final_pnl": final_pnls})
-    final_csv = os.path.join(output_folder, "monte_carlo_final_pnls.csv")
-    final_df.to_csv(final_csv, index=False)
+    final_df.to_csv(os.path.join(data_dir, "monte_carlo_final_pnls.csv"), index=False)
 
     # build figure with two rows: sample equity curves and histogram
     fig = make_subplots(rows=2, cols=1, row_heights=[0.6, 0.4], specs=[[{}], [{}]], shared_xaxes=False, vertical_spacing=0.12)
@@ -130,6 +132,12 @@ def generate_monte_carlo_report(
 
     out_html = os.path.join(output_folder, "monte_carlo.html")
     fig.write_html(out_html, include_plotlyjs="cdn", config={"scrollZoom": True, "displayModeBar": True})
+
+    # write PNG to separate folder if provided (keeps figures_html clean)
+    if png_output_folder is not None:
+        os.makedirs(png_output_folder, exist_ok=True)
+        out_png = os.path.join(png_output_folder, "monte_carlo.png")
+        fig.write_image(out_png, width=1400, height=900, scale=2, engine="kaleido")
 
     return out_html
 
