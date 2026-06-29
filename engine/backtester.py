@@ -31,6 +31,7 @@ class BacktestReport:
                 "quantity": trade.quantity,
                 "pnl": trade.pnl,
                 "duration_min": trade.duration,
+                "highest_unrealized_profit": trade.highest_unrealized_profit,
             }
             for trade in self.trades
         ])

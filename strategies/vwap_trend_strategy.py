@@ -41,10 +41,10 @@ class VWAPTrendStrategy(BaseStrategy):
             elif row["time"] == exit_time:
                 current_position = 0
             elif row["time"] == entry_time:
-                if row["prev_open"] < row["prev_vwap"]:
-                    current_position = -1
-                elif row["prev_close"] > row["prev_vwap"]:
+                if row["prev_close"] > row["prev_vwap"]:
                     current_position = 1
+                elif row["prev_close"] < row["prev_vwap"]:
+                    current_position = -1
                 else:
                     current_position = 0
             else:

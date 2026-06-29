@@ -165,3 +165,57 @@ def generate_trade_chart_for_report(
 ) -> str:
     output_path = os.path.join(report_folder, filename)
     return generate_trade_chart_html(candles, trades, output_path)
+
+
+def generate_daily_trade_charts(
+    candles: pd.DataFrame,
+    trades: List[Trade],
+    html_dir: str,
+    png_dir: str,
+    max_days: int = 5,
+) -> list:
+    """Generate one chart per trading day for the first N trading days.
+
+    VWAP is pre-computed on the full candle set (correct daily reset)
+    before slicing per day. Returns a list of dicts with keys
+    'date', 'html_path', 'png_path'.
+    """
+    os.makedirs(png_dir, exist_ok=True)
+
+    # Pre-compute VWAP on the full dataset so each day gets correct values
+    df_full = candles.copy()
+    if "vwap" not in df_full.columns:
+        df_full["vwap"] = calculate_vwap(df_full)
+
+    # Get sorted unique trading dates from candles
+    dates = sorted(df_full["datetime"].dt.date.unique())
+    dates = dates[:max_days]
+
+    results = []
+    for day in dates:
+        # Filter candles + VWAP for this date
+        day_mask = df_full["datetime"].dt.date == day
+        day_candles = df_full[day_mask].reset_index(drop=True)
+
+        # Filter trades whose entry_time falls on this date
+        day_trades = [t for t in trades if t.entry_time.date() == day]
+
+        if day_candles.empty:
+            continue
+
+        date_str = day.strftime("%Y-%m-%d")
+        title = f"VWAP NQ Trend Strategy — {date_str}"
+
+        # ── HTML ──
+        html_path = os.path.join(html_dir, f"trade_chart_{date_str}.html")
+        # Pass pre-computed VWAP by adding it, then let generate_trade_chart_html skip recalc
+        generate_trade_chart_html(day_candles, day_trades, html_path, title=title)
+
+        # ── PNG ──
+        png_path = os.path.join(png_dir, f"trade_chart_{date_str}.png")
+        generate_trade_chart_html(day_candles, day_trades, png_path, title=title)
+
+        results.append({"date": date_str, "html_path": html_path, "png_path": png_path})
+        print(f"  Saved daily chart: {date_str}")
+
+    return results

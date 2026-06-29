@@ -14,6 +14,7 @@ class Trade:
     slippage: float
     tick_size: float
     tick_value: float
+    highest_unrealized_profit: float = 0.0
 
     @property
     def pnl(self) -> float:

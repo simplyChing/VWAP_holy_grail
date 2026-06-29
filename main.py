@@ -4,7 +4,7 @@ import yaml
 from engine.backtester import Backtester
 from strategies.vwap_trend_strategy import VWAPTrendStrategy
 from data_source.csv_loader import CSVDataSource
-from validation.chart_generator import generate_trade_chart_for_report
+from validation.chart_generator import generate_trade_chart_for_report, generate_daily_trade_charts
 from validation.equity_generator import generate_equity_curve_for_report
 from analytics.monte_carlo import generate_monte_carlo_report
 from analytics.performance import calculate_performance_summary, format_performance_summary
@@ -69,6 +69,15 @@ def main() -> None:
             report.trades,
             figures_png_dir,
             filename="trade_chart.png",
+        )
+
+        # ── Daily trade charts (first 5 trading days) ────────────
+        daily_results = generate_daily_trade_charts(
+            filtered_candles,
+            report.trades,
+            figures_html_dir,
+            figures_png_dir,
+            max_days=5,
         )
 
         # ── Equity curve ─────────────────────────────────────────
